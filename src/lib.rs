@@ -2,7 +2,7 @@
 #![feature(lang_items, alloc_error_handler, core_intrinsics)]
 #![allow(unused_variables, dead_code, unused_imports)]
 
-extern crate alloc;
+pub extern crate alloc;
 
 pub mod display;
 pub mod file;
@@ -10,6 +10,10 @@ pub mod geometry;
 pub mod graphics;
 pub mod sprite;
 pub mod system;
+
+pub use anyhow;
+pub use crankstart_sys;
+pub use euclid;
 
 use {
     crate::{
@@ -53,24 +57,24 @@ impl Playdate {
 
 #[macro_export]
 macro_rules! log_to_console {
-    ($($arg:tt)*) => ($crate::system::System::log_to_console(&alloc::format!($($arg)*)));
+    ($($arg:tt)*) => ($crate::system::System::log_to_console(&$crate::alloc::format!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! pd_func_caller {
     ($raw_fn_opt:expr, $($arg:tt)*) => {
         unsafe {
-            use alloc::format;
+            use $crate::alloc::format;
             let raw_fn = $raw_fn_opt
-                .ok_or_else(|| anyhow::anyhow!("{} did not contain a function pointer", stringify!($raw_fn_opt)))?;
+                .ok_or_else(|| $crate::anyhow::anyhow!("{} did not contain a function pointer", stringify!($raw_fn_opt)))?;
             Ok(raw_fn($($arg)*))
         }
     };
     ($raw_fn_opt:expr) => {
         unsafe {
-            use alloc::format;
+            use $crate::alloc::format;
             let raw_fn = $raw_fn_opt
-                .ok_or_else(|| anyhow::anyhow!("{} did not contain a function pointer", stringify!($raw_fn_opt)))?;
+                .ok_or_else(|| $crate::anyhow::anyhow!("{} did not contain a function pointer", stringify!($raw_fn_opt)))?;
             Ok(raw_fn())
         }
     };
@@ -202,16 +206,15 @@ impl<T: 'static + Game> GameRunner<T> {
 macro_rules! crankstart_game {
     ($game_struct:tt) => {
         pub mod game_setup {
-            extern crate alloc;
             use super::*;
             use {
-                alloc::{boxed::Box, format},
-                crankstart::{
+                $crate::{
                     graphics::PDRect, log_to_console, sprite::SpriteManager, system::System,
                     GameRunner, Playdate,
-                },
-                crankstart_sys::{
-                    LCDRect, LCDSprite, PDSystemEvent, PlaydateAPI, SpriteCollisionResponseType,
+                    alloc::{boxed::Box, format},
+                    crankstart_sys::{
+                        LCDRect, LCDSprite, PDSystemEvent, PlaydateAPI, SpriteCollisionResponseType,
+                    },
                 },
             };
 
@@ -244,7 +247,7 @@ macro_rules! crankstart_game {
                 playdate: *mut PlaydateAPI,
                 event: PDSystemEvent,
                 _arg: u32,
-            ) -> crankstart_sys::ctypes::c_int {
+            ) -> $crate::crankstart_sys::ctypes::c_int {
                 if event == PDSystemEvent::kEventInit {
                     let mut playdate = Playdate::new(playdate, sprite_update, sprite_draw);
                     System::get()
